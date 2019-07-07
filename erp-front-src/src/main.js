@@ -7,6 +7,7 @@ import router from './router'
 import './assets/css/common.css'
 import VueWechatTitle from 'vue-wechat-title'
 import iView from 'iview'
+//import {Button,Modal,Message,TimePicker,DatePicker,Row,Col} from 'iview';
 import VueQriously from 'vue-qriously'
 import 'iview/dist/styles/iview.css'
 
@@ -14,6 +15,13 @@ import {post, get, patch, put, getStationName} from './assets/js/service'
 
 Vue.use(VueWechatTitle)
 Vue.use(iView)
+/*Vue.component('Button', Button);
+Vue.component('Modal', Modal);
+Vue.component('Message', Message);
+Vue.component('TimePicker', TimePicker);
+Vue.component('DatePicker', DatePicker);
+Vue.component('Row', Row);
+Vue.component('Row', Col);*/
 Vue.use(VueQriously)
 Vue.config.productionTip = false
 Vue.prototype.$post = post

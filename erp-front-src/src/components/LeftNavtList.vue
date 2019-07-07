@@ -83,6 +83,12 @@
               name:'monthlyIndex',
               router:'/monthly/index',
               isStrict:false
+            },
+            {
+              title:'代收货款',
+              name:'receivableList',
+              router:'/receivable/list',
+              isStrict:false
             }
           ]
         },
@@ -108,12 +114,12 @@
               router:'/station/list',
               isStrict:false
             },
-            {
-              title:'线路列表',
-              name:'lineList',
-              router:'/line/list',
-              isStrict:false
-            },
+            /*{
+             title:'线路列表',
+             name:'lineList',
+             router:'/line/list',
+             isStrict:false
+             },*/
             {
               title:'设置',
               name:'orderSite',

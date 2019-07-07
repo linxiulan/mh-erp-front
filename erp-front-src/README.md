@@ -1,6 +1,6 @@
 # mh
 
-#使用了VUE框架，脚手架是vue-cli
+> mh
 
 ## Build Setup
 

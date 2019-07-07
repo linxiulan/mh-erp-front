@@ -75,31 +75,19 @@
       <ul class="searchList clearfix">
         <li>
           <span class="title">订单号码：</span>
-          <input type="text" placeholder="请输入订单号" v-model="searchData.orderNo"/>
+          <input type="text" placeholder="请输入订单号" v-model="searchData.tradeId"/>
         </li>
         <li>
           <span class="title">下单时间：</span>
           <div class="clearfix">
             <div class="doubleRow-left">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.minDate" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMinDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+              <DatePicker :value="searchData.minGmtCreate" type="date" placeholder="请选择时间"
+                          @on-change="setMinDate"></DatePicker>
             </div>
             <div class="doubleRow-span">到</div>
             <div class="doubleRow-right">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.maxDate" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMaxDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+              <DatePicker :value="searchData.maxGmtCreate" type="date" placeholder="请选择时间"
+                          @on-change="setMaxDate"></DatePicker>
             </div>
           </div>
         </li>
@@ -118,7 +106,7 @@
         <li>
           <span class="title">订单状态：</span>
           <template>
-            <Select v-model="searchData.orderStatus" style="width:280px" placeholder="请选择订单的状态">
+            <Select v-model="searchData.orderStatus"  placeholder="请选择订单的状态" clearable>
               <Option v-for="item in orderStatus" :value="item.value" :key="item.value">{{
                 item.label }}
               </Option>
@@ -128,7 +116,7 @@
         <li>
           <span class="title">公司网点：</span>
           <template>
-            <Select v-model="searchData.stationId" style="width:280px" placeholder="请选择公司网点">
+            <Select v-model="searchData.stationId"  placeholder="请选择公司网点" clearable>
               <Option v-for="item in stationList" :value="item.stationId" :key="item.stationId">{{
                 item.name }}
               </Option>
@@ -138,7 +126,7 @@
         <li style="margin-right: 0px;">
           <span class="title">车辆信息：</span>
           <template>
-            <Select v-model="searchData.carId" style="width:280px" placeholder="请选择车牌号码">
+            <Select v-model="searchData.carId" placeholder="请选择车牌号码" clearable>
               <Option v-for="item in vehicleList" :value="item.carId" :key="item.carId">{{
                 item.plateNumber }}
               </Option>
@@ -149,7 +137,11 @@
       <ul class="searchList clearfix">
         <li>
           <span class="title">跟进员工：</span>
-          <input type="text" v-model="searchData.personnel" placeholder="请输入员工姓名"/>
+          <Select v-model="searchData.uid"  placeholder="请选择跟进员工" clearable>
+            <Option v-for="item in personnelList" :value="item.id" :key="item.id">{{
+              item.name }}
+            </Option>
+          </Select>
         </li>
         <li>
           <span class="title">客户信息：</span>
@@ -169,9 +161,9 @@
             <th>订单号</th>
             <th width="12%">发货</th>
             <th width="12%">收货</th>
-            <th width="10%">货物</th>
-            <th width="8%">订单费用</th>
-            <th width="8%">代收货款</th>
+            <th width="10%">货物<br/>{{totalItemCount}}</th>
+            <th width="10%">订单费用<br/>{{totalAmount/100}} 元</th>
+            <th width="10%">代收货款<br/>{{totalReceivable/100}} 元</th>
             <th width="12%">最后跟进</th>
             <th width="8%">车辆</th>
             <th width="12%">订单状态</th>
@@ -238,6 +230,8 @@
         c_callback = function () {
           _this.getCarList(s_callback)
         }
+      this.$Spin.show()
+      _this.getPersonnel()
       _this.getStationList(c_callback)
     },
     data(){
@@ -252,10 +246,10 @@
           {'label': '已提货', 'value': 'COMPLETED'},
           {'label': '已取消', 'value': 'CANCEL'},
         ],
-        orders = [];
+        orders = []
       return {
         searchData: {
-          'tradeId': _query.orderNo || '',
+          'tradeId': _query.tradeId || '',
           'minGmtCreate': _query.minGmtCreate || '',  //最小下单时间
           'maxGmtCreate': _query.maxGmtCreate || '',  //最大下单时间
           'minAmount': _query.minAmount || '',  //最小金额
@@ -268,7 +262,11 @@
           'size': _query.size ? parseInt(_query.size) : 20,
           'index': _query.index ? parseInt(_query.index) : 0
         },
-        'orderStatus': orderStatus,
+        orderStatus: orderStatus,
+        totalAmount: '',
+        totalItemCount: '',
+        totalReceivable: '',
+        personnelList: '',
         'vehicleList': '',
         'stationList': '',
         'orders': orders,
@@ -278,10 +276,10 @@
     },
     methods: {
       setMinDate(date){
-        this.searchData.minDate = date
+        this.searchData.minGmtCreate = date
       },
       setMaxDate(date){
-        this.searchData.maxDate = date
+        this.searchData.maxGmtCreate = date
       },
       getCurrentPage(index, size){
         let _num = Number(index) / Number(size)
@@ -290,6 +288,25 @@
           _num = 1
         }
         return _num
+      },
+      //获取跟进员工
+      getPersonnel(){
+        /*let _personnelList = getLocalStorage('personnelListData') || ''
+         if (_personnelList != '') {
+         this.personnelList = _personnelList
+         return false
+         }*/
+        this.$get(serviceApi.userList).then(res => {
+          if (res.code == 'SUCCESS') {
+            let _data = res.data
+            this.personnelList = _data
+            setLocalStorage('personnelListData', _data)
+          } else {
+            this.$Message.error(res.msg)
+          }
+        }).catch(err => {
+          this.$Message.error('获取跟进员工列表，请刷新重试')
+        })
       },
       //获取站点列表
       getStationList(callback){
@@ -363,13 +380,19 @@
         if (_searchData.maxAmount != '') {
           _searchData.maxAmount = _searchData.maxAmount * 100
         }
+        this.$Spin.show()
         this.$get(serviceApi.getOrderList, _searchData).then(res => {
           //this.isSaving = false
           if (res.code == 'SUCCESS') {
             this.orders = res.data
             this.total = res.pageInfo.total
+            this.totalAmount = res.pageInfo.totalAmount
+            this.totalItemCount = res.pageInfo.totalItemCount
+            this.totalReceivable = res.pageInfo.totalReceivable
+            this.$Spin.hide()
           } else {
             this.$Message.error(res.msg)
+            this.$Spin.hide()
           }
         })
       },
@@ -419,6 +442,7 @@
           'carId': '',         //车辆ID
           'uid': '',             //用户ID
           'mobileOrName': '',  ///客户信息
+          'size': this.searchData.size || 20,
           'index': this.searchData.index || 0
         }
         this.searchData = _parameter
@@ -440,7 +464,7 @@
       //导出文件
       exportFile(){
         let _this = this,
-          _searchData = cloneObj(this.searchData);
+          _searchData = cloneObj(this.searchData)
         if (_searchData.minAmount != '') {
           _searchData.minAmount = _searchData.minAmount * 100
         }

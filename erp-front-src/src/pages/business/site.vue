@@ -180,6 +180,20 @@
       color: #999;
     }
   }
+
+  .siteDetail-main {
+    min-height: 100px;
+    h2 {
+      font-size: 14px;
+      margin-bottom: 10px;
+    }
+    li {
+      float: left;
+      width: 50%;
+      margin-bottom: 10px;
+      font-size: 14px;
+    }
+  }
 </style>
 <template>
   <div class="mian">
@@ -191,25 +205,13 @@
           <span class="title">时间段：</span>
           <div class="clearfix">
             <div class="doubleRow-left">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.minDate" type="month" placeholder="请选择日期" style="width: 124px"
-                              @on-change="setMinDate"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+              <DatePicker :value="searchData.minDate" type="month" placeholder="请选择日期"
+                          @on-change="setMinDate"></DatePicker>
             </div>
             <div class="doubleRow-span">到</div>
             <div class="doubleRow-right">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.maxDate" type="month" placeholder="请选择日期" style="width: 124px"
-                              @on-change="setMaxDate"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+              <DatePicker :value="searchData.maxDate" type="month" placeholder="请选择日期"
+                          @on-change="setMaxDate"></DatePicker>
             </div>
           </div>
         </li>
@@ -227,7 +229,7 @@
         <tr>
           <th width="25%">时间</th>
           <th width="25%">网点</th>
-          <th >成本</th>
+          <th>成本</th>
           <th width="25%">操作</th>
         </tr>
         <template v-if="listData.length>0">
@@ -259,20 +261,25 @@
       </table>
     </div>
     <!--查看成本明细-->
-    <template v-if="isShowCostDetailPop">
-      <div class="popUp-bg"></div>
-      <div class="popUp" id="popUp-editCostItems" :style="{marginTop:(0-172-editcostItems.length*45)/2+'px'}">
-        <div class="popTitle">编辑成本项<span @click="closePop"></span></div>
-        <div class="popBox">
-          <p style="color:#333;">设置您的企业的成本项目，方便管理成本（最多5项）</p>
-          <ul>
-            <li v-for="(item,key) in editcostItems"><input type="text" v-model="editcostItems[key]"><a
-              href="javascript:;" @click="operateMobile(key)"></a></li>
+    <Modal
+      v-model="detail.isShow"
+      :title="detail.title"
+      @on-ok="ok"
+      okText="编辑"
+      :scrollable="true"
+    >
+      <div class="siteDetail-main">
+        <Spin size="large" fix v-if="detail.isloading"></Spin>
+        <div v-else>
+          <h2>总成本：{{detail.totalAmount/100}}元</h2>
+          <ul class="clearfix">
+            <li v-for="item in detail.data">
+              <span>{{item.name}} : </span>{{item.amount/100}} 元
+            </li>
           </ul>
-          <a class="saveBtn" href="javascript:;" @click="saveCostItems">{{isSaving?'保存中':'保存'}}</a>
         </div>
       </div>
-    </template>
+    </Modal>
   </div>
 </template>
 <script>
@@ -284,32 +291,47 @@
         _callback = function () {
           _this.search()
         }
+      this.$Spin.show()
       this.getCostItem(_callback)
-
     },
     data(){
       return {
         searchData: {
           minDate: '',
           maxDate: '',
-          index:0,
-          size:20
+          index: 0,
+          size: 20
         },
-        page:'',
-        listTotal:'',
-        listData:'',
+        page: '',
+        listTotal: '',
+        listData: '',
         costItems: '',
         price: '',
         isLoading: false,
         isSaving: false,
         isShowCostDetailPop: false,
-
+        detail: {
+          date: '',
+          station: '',
+          title: '',
+          data: '',
+          totalAmount: '',
+          isloading: false,
+          isShow: false
+        }
       }
     },
     methods: {
+      ok () {
+        let _this = this,
+          _detail = _this.detail,
+          _date = _detail.date,
+          _station = _detail.station
+        _this.$router.push('/business/siteAdd?date=' + _date + '&station=' + _station)
+      },
       getYearAndMonth(date){
-        let _date = date.split("-");
-        return _date[0]+'年'+_date[1]+'月'
+        let _date = date.split('-')
+        return _date[0] + '年' + _date[1] + '月'
       },
       getCurrentPage(index, size){
         let _num = Number(index) / Number(size)
@@ -383,35 +405,38 @@
       //获取成本列表数据
       getExpendList(){
         let $searchData = this.searchData,
-          _index=$searchData.index,
-          _size=$searchData.size,
+          _index = $searchData.index,
+          _size = $searchData.size,
           _minDate = $searchData.minDate,
-          _maxDate = $searchData.maxDate;
+          _maxDate = $searchData.maxDate
+        this.$Spin.show()
         this.$get(serviceApi.getExpendList, {
           minDate: _minDate.substr(0, 7) + '-01',
           maxDate: _maxDate.substr(0, 7) + '-01',
-          index:_index,
-          size:_size
+          index: _index,
+          size: _size
         }).then(res => {
-          this.isLoading = false;
+          this.isLoading = false
+          this.$Spin.hide()
           if (res.code == 'SUCCESS') {
-            let _data = res.data;
-            this.listTotal = res.pageInfo.total;
+            let _data = res.data
+            this.listTotal = res.pageInfo.total
             /*for (let i = 0; i < _data.length; i++) {
-              let item = _data[i],
-                prices = item.prices
-              for (let k = 0; k < prices.length; k++) {
-                let p_item = prices[k]
-                _data[i].prices[k].amount = p_item.amount / 100
-              }
-            }*/
-            this.listData=_data;
+             let item = _data[i],
+             prices = item.prices
+             for (let k = 0; k < prices.length; k++) {
+             let p_item = prices[k]
+             _data[i].prices[k].amount = p_item.amount / 100
+             }
+             }*/
+            this.listData = _data
             //this.price = _data
           } else {
             this.$Message.error(res.msg)
           }
         }).catch(err => {
           this.isLoading = false
+          this.$Spin.hide()
           this.$Message.error('获取数据失败，请重试')
         })
       },
@@ -424,26 +449,42 @@
         this.isShowAddPricePop = false
       },
       //成本明细
-      openCostDetail(date,station,totalAmount){
-        this.$Message.error('该功能暂不能用');
-        return false
-        let _date = date.split("-"),
-          _year=_date[0],
-          _month=_date[1],
-          _stationName=station?station.name:'公司总体',
-          _totalAmount=totalAmount||0;
-        this.$get('/api/admin/prices/'+_year+'/'+_month+'/'+station.stationId, {
-
-        }).then(res => {
-          this.isLoading = false;
+      openCostDetail(date, station, totalAmount){
+        let _date = date.split('-'),
+          _year = _date[0],
+          _month = _date[1],
+          _stationName = station ? station.name : '公司总体',
+          _stationId = station ? station.stationId : '-1',
+          _totalAmount = totalAmount || 0
+        this.detail.title = _year + '年' + _month + '月 "' + _stationName + ' "成本明细'
+        this.detail.date = _year + '/' + _month
+        this.detail.station = _stationId
+        this.detail.totalAmount = _totalAmount
+        this.detail.isShow = true
+        this.detail.isloading = true
+        this.$get(serviceApi.getExpendList + '/' + _year + '/' + _month + '/' + _stationId).then(res => {
+          this.detail.isloading = false
           if (res.code == 'SUCCESS') {
-            let _data = res.data;
-            this.listData=_data;
+            let _data = res.data,
+              _keys = res.keys,
+              detailData = []
+            for (let i = 0; i < _data.length; i++) {
+              let _prices = _data[i].prices
+              for (let p = 0; p < _prices.length; p++) {
+                let _item = _prices[p]
+                detailData.push({
+                  amount: _item.amount,
+                  itemId: '',
+                  name: _keys[p].name
+                })
+              }
+            }
+            this.detail.data = detailData
           } else {
             this.$Message.error(res.msg)
           }
         }).catch(err => {
-          this.isLoading = false
+          this.detail.isloading = false
           this.$Message.error('获取数据失败，请重试')
         })
       },

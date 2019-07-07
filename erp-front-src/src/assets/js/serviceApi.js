@@ -42,7 +42,10 @@ let serviceApi = {
   getPriceList:'/api/price/list', //获取收费项目
   addPriceItem:'/api/admin/price', //添加收费项目
   delPriceItem:'/api/admin/price/del/', //删除收费项目
-  upDataCompanyInfo:'/api/admin/company'//修改公司资料
+  upDataCompanyInfo:'/api/admin/company',//修改公司资料
+  getReceivableList:'/api/admin/receivable/list', //获取代收货款列表
+  upDataReceivable:'/api/admin/receivable',//修改代收货款
+  exportReceivableList:'/api/admin/receivable/list/export',//导出代收货款列表
 }
 
 export { serviceApi }

@@ -19,6 +19,7 @@ import vehicleList from '@/pages/vehicle/list'
 import lineList from '@/pages/line/list'
 import stationList from '@/pages/station/list'
 import personnelList from '@/pages/personnel/list'
+import receivableList from '@/pages/receivable/list'
 import orderSite from '@/pages/order/site'
 import notFound from '@/pages/404'
 
@@ -187,6 +188,22 @@ export default new Router({
       //component: resolve => require(['@/pages/monthly/orderlist.vue'], resolve),
       meta: {
         title: '月结收账'
+      }
+    },
+    {
+      path: '/receivable',
+      name: 'receivableList',
+      component: receivableList,
+      meta: {
+        title: '代收货款'
+      }
+    },
+    {
+      path: '/receivable/list',
+      name: 'receivableList',
+      component: receivableList,
+      meta: {
+        title: '代收货款'
       }
     },
     {

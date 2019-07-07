@@ -1,4 +1,3 @@
-<script src="../../assets/js/common.js"></script>
 <style type="text/scss" lang="scss" scoped>
   .personnelList-title {
     padding: 15px 0px 5px 0px;
@@ -33,6 +32,7 @@
       a {
         color: #336699;
         padding: 0 10px;
+        white-space:nowrap;
       }
       a:hover {
         color: #f60;
@@ -79,6 +79,40 @@
         color: #333;
         font-weight: 400;
       }
+    }
+    .saveBtn {
+      margin-left: 60px;
+    }
+  }
+  #popUp-resetPassword{
+    width: 600px;
+    margin-left: -300px;
+    margin-top: -100px;
+    ul {
+      width: 100%;
+    }
+    li {
+      padding-left: 60px;
+      position: relative;
+      min-height: 35px;
+      margin-bottom: 20px;
+    }
+    h3 {
+      position: absolute;
+      top: 0;
+      left: 0;
+      line-height: 35px;
+      font-size: 12px;
+      color: #333;
+      font-weight: 400;
+    }
+    input[type='password'] {
+      display: block;
+      width: 100%;
+      height: 35px;
+      border: 1px solid #E4E4E4;
+      padding: 0 10px;
+      box-sizing: border-box;
     }
     .saveBtn {
       margin-left: 60px;
@@ -153,36 +187,45 @@
       <div class="personnelList-title">所有员工<a href="javascript:;" @click="openAddEmployeesPop">添加员工</a></div>
       <table>
         <tr>
-          <th width="125">员工姓名</th>
-          <th width="220">手机号码</th>
-          <th width="">所属网点</th>
-          <th width="175">绑定的微信</th>
-          <th width="200">绑定时间</th>
-          <th width="220">操作</th>
+          <th width="15%">员工姓名</th>
+          <th width="13%">手机号码</th>
+          <th width="13%">员工角色</th>
+          <th >所属网点</th>
+          <th width="20%">绑定的微信</th>
+          <th width="13%">绑定时间</th>
+          <th width="15%">操作</th>
         </tr>
         <template v-if="personnels.length>0">
           <tr v-for="item in personnels">
             <td>{{item.name}}</td>
             <td>{{item.mobile}}</td>
+            <td>{{item.role=='MANAGER'?'经理':item.role=='ADMIN'?'管理员':'普通员工'}}</td>
             <td>{{item.station ? item.station.name:''}}</td>
             <td>{{item.wxOpenId}}</td>
             <td>{{item.gmtBind}}</td>
             <td>
-              <a href="javascript:;" @click="openEditBranchPop(item.id,item.station?item.station.stationId:'')">编辑资料</a>
-              <a href="javascript:;" @click="openUntiePop(item.id,item.name)">解绑</a>
+
+              <a href="javascript:;" @click="openEditBranchPop(item.id,item.station?item.station.stationId:'',item.role)" v-if="role=='ADMIN'">编辑资料</a>
+
+              <a href="javascript:;" @click="openEditBranchPop($event,item.id)" v-if="role=='MANAGER' && item.role!='MANAGER'" >设置归属网点</a>
+              <a href="javascript:;" @click="openUntiePop(item.id,item.name)" v-if="(role!='EMPLOYEE' && item.role!='MANAGER') || role=='ADMIN'" >解绑</a>
+              <a href="javascript:;" @click="openResetPasswordPop(item.id)" v-if="role=='ADMIN'" >重置密码</a>
             </td>
           </tr>
           <tr>
-            <td colspan="6">
+            <td colspan="7">
               <template>
-                <Page :total="total" :current="search.page" :page-size="pageSize"></Page>
+                <Page :total="total" :current="getCurrentPage(searchData.index,searchData.size)"
+                      :page-size="searchData.size"
+                      @on-change="pageChange"
+                ></Page>
               </template>
             </td>
           </tr>
         </template>
         <template v-else>
           <tr>
-            <td colspan="10" class="table-noDate">
+            <td colspan="6" class="table-noDate">
               没有找到任何员工，您可以<a href="javascript:;" @click="openAddEmployeesPop">添加员工</a>
             </td>
           </tr>
@@ -201,8 +244,26 @@
                 </Option>
               </Select>
             </li>
+            <li class="editBranch-row"><h3>员工角色:</h3>
+              <Select v-model="editBranch.role" placeholder="请选择所在员工角色">
+                <Option v-for="item in roleData" :value="item.value" :key="item.value">{{ item.name }}
+                </Option>
+              </Select>
+            </li>
           </ul>
           <a class="saveBtn" href="javascript:;" @click="saveEditBranch">{{isSaving?'保存中':'保存'}}</a>
+        </div>
+      </div>
+    </template>
+    <template v-if="isResetPasswordPop">
+      <div class="popUp-bg"></div>
+      <div class="popUp" id="popUp-resetPassword">
+        <div class="popTitle">重置密码<span @click="closePop"></span></div>
+        <div class="popBox">
+          <ul class="editBranch-main">
+            <li><h3>密码:</h3><input type="password" v-model="resetPasswordData.value" placeholder="请输入密码"/></li>
+          </ul>
+          <a class="saveBtn" href="javascript:;" @click="saveResetPassword">{{isSaving?'保存中':'保存'}}</a>
         </div>
       </div>
     </template>
@@ -241,11 +302,17 @@
         callback = function () {
           _this.getListData()
         }
+      this.$Spin.show();
       _this.getStationList(callback)
     },
     data(){
       let _query = this.$router.history.current.query
       return {
+        role:getCookie('role')||'',
+        roleData:[
+          {'name':'经理','value':'MANAGER'},
+          {'name':'普通员工','value':'EMPLOYEE'}
+        ],
         searchData: {
           'name': _query.name || '',
           'mobile': _query.mobile || '',
@@ -253,9 +320,8 @@
           'size': _query.size ? parseInt(_query.size) : 20,
           'index': _query.index ? parseInt(_query.index) : 0
         },
-        stationList: getLocalStorage('stationListData') || '',
+        stationList: '',
         personnels: [],
-        pageSize: 20,
         total: 100,
         editBranch: {
           id: '',
@@ -265,6 +331,10 @@
           id: '',
           name: ''
         },
+        resetPasswordData:{
+          id: '',
+          value:''
+        },
         addEmployees: {
           isLoading: true,
           text: '',
@@ -273,21 +343,37 @@
         },
         isShowEditBranchPop: false,
         isShowUntiePop: false,
+        isResetPasswordPop:false,
         isShowAddEmployeesPop: false,
-        isSaving: false
+        isSaving: false,
       }
     },
     methods: {
+      getCurrentPage(index, size){
+        let _num = Number(index) / Number(size)
+        _num = Math.ceil(_num)
+        if (_num < 1) {
+          _num = 1
+        }
+        return _num
+      },
       getListData(){
+        this.$Spin.show()
         this.$get(serviceApi.userList, this.searchData).then(res => {
           if (res.code == 'SUCCESS') {
             this.personnels = res.data
-            this.pageSize = res.pageInfo.size
+            //this.pageSize = res.pageInfo.size
             this.total = res.pageInfo.total
+            this.$Spin.hide()
           } else {
             this.$Message.error(res.msg)
+            this.$Spin.hide()
           }
         })
+      },
+      pageChange(num){
+        this.searchData.index = (num - 1) * this.searchData.size
+        this.getListData()
       },
       //获取站点列表
       getStationList(callback){
@@ -331,29 +417,36 @@
         this.searchData = _parameter
       },
       //编辑员工资料
-      openEditBranchPop(id, stationId){
+      openEditBranchPop(id, stationId,role){
         let _this = this
         if (_this.stationList == '') {
           let _callback = function () {
-            _this.openEditBranchPop(id, stationId)
+            _this.openEditBranchPop(id, stationId,role)
           }
           _this.getStation(_callback)
           return false
         }
         _this.editBranch.id = id || ''
+        this.editBranch.role=role||'EMPLOYEE'
         _this.editBranch.stationId = stationId || ''
         _this.isShowEditBranchPop = true
       },
       saveEditBranch(){
         let _id = this.editBranch.id,
-          _stationId = this.editBranch.stationId
+          _stationId = this.editBranch.stationId,
+          _role=this.editBranch.role;
         if (_stationId == '') {
           this.$Message.warning('请选择所在网点')
           return false
         }
+        if (_role == '') {
+          this.$Message.warning('请选择员工角色')
+          return false
+        }
         this.isSaving = true
         this.$post(serviceApi.userUpdata + '/' + _id, {
-          'stationId': _stationId
+          'stationId': _stationId,
+          'role':_role
         }).then(res => {
           this.isSaving = false
           if (res.code == 'SUCCESS') {
@@ -365,7 +458,31 @@
           }
         }).catch(err => {
           this.isSaving = false
-          this.$Message.error('操作失败')
+          this.$Message.error('操作失败');
+        })
+      },
+      //重置密码
+      saveResetPassword(){
+        let _id = this.resetPasswordData.id,
+          _value = this.resetPasswordData.value;
+        if (_value == '') {
+          this.$Message.warning('请选择重置密码')
+          return false
+        }
+        this.isSaving = true
+        this.$post('/api/admin/user/'+_id+'/pwd/reset', {
+          'password': _value
+        }).then(res => {
+          this.isSaving = false
+          if (res.code == 'SUCCESS') {
+            this.$Message.success('重置密码成功')
+            this.isResetPasswordPop = false
+          } else {
+            this.$Message.error(res.msg)
+          }
+        }).catch(err => {
+          this.isSaving = false
+          this.$Message.error('操作失败');
         })
       },
       setListData(id, stationId){
@@ -381,11 +498,48 @@
           }
         }
       },
+      //将员工设置为自己所属的站点
+      setPersonnelBranch(e,_id){
+        let _element = e.target,
+          _text = _element.innerHTML,
+          _stationId=getCookie('stationId')||'';
+        if (_text != '设置归属网点') {
+          return false
+        } else if (_id == '') {
+          this.$Message.warning('操作失败，没有所需id')
+          return false
+        }else  if(_stationId==''){
+          this.$Message.warning('你并没有归属的网点')
+          return false
+        }
+        _element.innerHTML = '设置中'
+        this.$post(serviceApi.userUpdata + '/' + _id, {
+          'stationId': _stationId,
+        }).then(res => {
+          _element.innerHTML = '设置归属网点'
+          if (res.code == 'SUCCESS') {
+            this.$Message.success('设置成功')
+            this.isShowEditBranchPop = false
+            this.setListData(_id, _stationId)
+          } else {
+            this.$Message.error(res.msg)
+          }
+        }).catch(err => {
+          _element.innerHTML = '设置归属网点'
+          this.$Message.error('操作失败')
+        })
+      },
       //解绑用户
       openUntiePop(id, name){
         this.untieData.id = id || ''
         this.untieData.name = name || ''
         this.isShowUntiePop = true
+      },
+      //重置用户密码
+      openResetPasswordPop(id){
+        this.resetPasswordData.id = id || '';
+        this.resetPasswordData.value='';
+        this.isResetPasswordPop = true
       },
       untieUser(){
         if (this.saving) {

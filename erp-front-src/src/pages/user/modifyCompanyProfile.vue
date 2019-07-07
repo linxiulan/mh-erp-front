@@ -71,7 +71,7 @@
     <div class="breadCrumbs"><span>公司管理</span> &gt; <span>公司资料</span></div>
     <div class="modifyCompanyProfile-main">
       <div class="modifyCompanyProfile-title">修改公司资料</div>
-      <ul v-if="name">
+      <ul>
         <li>
           <h3>公司logo</h3>
           <div class="modifyCompanyProfile-logo">
@@ -83,6 +83,7 @@
           </div>
         </li>
         <li><h3>公司名称</h3><input type="text" v-model="name" placeholder="请输入公司名称" maxlength="30"/></li>
+        <li><h3>联系方式</h3><input type="text" v-model="phone" placeholder="请输入公司联系方式" maxlength="20"/></li>
         <p style="font-size: 14px; ">员工数权限：最多可添加 {{maxUserCount}} 人，当前已有 {{userCount}} 人</p>
         <a href="javascript:;" @click="submitVerification">{{isSaving?'保存中':'保存'}}</a>
       </ul>
@@ -99,6 +100,7 @@
         name: '',
         icon: '',
         image: '',
+        phone:'',
         maxUserCount:0,
         userCount:0,
         isUpload: false,
@@ -114,19 +116,23 @@
     methods: {
       getCompanyInfo(){
         let _this=this;
+        this.$Spin.show()
         _this.$get(serviceApi.upDataCompanyInfo).then(res => {
           _this.isSaving=false;
           if (res.code == 'SUCCESS') {
             _this.name=res.data.name;
+            _this.phone=res.data.phone;
             _this.image=res.data.icon;
             _this.maxUserCount=res.data.maxUserCount;
             _this.userCount=res.data.userCount;
           } else {
             this.$Message.error(res.msg)
           }
+          this.$Spin.hide()
         }).catch(err => {
           _this.isSaving=false;
           _this.$Message.error('请求失败，请重试')
+          this.$Spin.hide()
         })
       },
       triggerButton(){
@@ -188,16 +194,19 @@
       savaCompanyInfo(){
         let _this=this,
           _icon = _this.icon!='null'?_this.icon:'',
-          _name = _this.name;
-        _this.isSaving = true
+          _name = _this.name,
+          _phone=_this.phone;
+        _this.isSaving = true;
         _this.$post(serviceApi.upDataCompanyInfo, {
           name: _name,
-          icon: _icon
+          icon: _icon,
+          phone:_phone
         }).then(res => {
           _this.isSaving=false;
           if (res.code == 'SUCCESS') {
-            this.$Message.success('公司资料修改成功')
-            setCookie('companyName', _name, 32 * 24 * 3600)
+            this.$Message.success('公司资料修改成功');
+            setCookie('companyName', _name, 32 * 24 * 3600);
+            //this.getCompanyInfo();
             location.reload()
           } else {
             this.$Message.error(res.msg)

@@ -64,7 +64,7 @@
     ul {
       width: 100%;
     }
-    li {
+    .list {
       padding-left: 60px;
       position: relative;
       min-height: 35px;
@@ -237,68 +237,62 @@
           <span class="title">下单时间：</span>
           <div class="clearfix">
             <div class="doubleRow-left">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.minDate" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMinDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+
+              <DatePicker :value="searchData.minDate" type="date" placeholder="请选择时间"
+                          @on-change="setMinDate(date)"></DatePicker>
             </div>
             <div class="doubleRow-span">到</div>
             <div class="doubleRow-right">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="searchData.maxDate" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMaxDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+              <DatePicker :value="searchData.maxDate" type="date" placeholder="请选择时间"
+                          @on-change="setMaxDate(date)"></DatePicker>
             </div>
           </div>
         </li>
       </ul>
       <div class="searchBtn clearfix">
-        <a class="searchBtn-left" href="javascript:;" @click="search">搜索</a>
-        <a class="searchBtn-right" href="javascript:;">清空</a>
+        <!--<a class="searchBtn-left" href="javascript:;" @click="search">搜索</a>-->
+        <a class="searchBtn-right" href="javascript:;" @click="emptySearchCondition">清空</a>
       </div>
     </div>
     <div class="monthlyIndex-main">
       <div class="monthlyIndex-title">全部月结账户<a href="javascript:;" @click="openEditClientPop()">添加账户</a></div>
       <table>
         <tr>
-          <th width="125">账户名称</th>
-          <th width="200">联系人</th>
+          <th width="15%">账户名称</th>
+          <th width="20%">联系人</th>
           <th colspan="2">关联手机</th>
-          <th width="145">结算状态</th>
-          <th width="130">操作</th>
+          <th width="20%">费用统计<br/>{{monthlyTotalAmount/100}}元</th>
+          <th width="18%">结算状态</th>
+          <th width="12%">操作</th>
         </tr>
         <template v-if="monthlyData.length>0">
-          <tr v-for="item in monthlyData">
+          <tr v-for="(item,index) in monthlyData" v-show="filterData(index)">
             <td>{{item.name}}</td>
             <td>{{item.username?item.username:'暂无'}} | {{item.mobile}}</td>
             <td>{{item.mobiles?item.mobiles.join('；'):''}}</td>
-            <td width="160">
+            <td width="15%">
               <a href="javascript:;" v-if="item.mobiles && item.mobiles.length>0"
-                 @click="openUntieMobilePop(item.customerId)">解绑</a>
-              <a href="javascript:;" @click="openAddMobilePop(item.customerId,item.name)">添加</a>
+                 @click="openUntieMobilePop(item.customerId,item.stationId)">解绑</a>
+              <a href="javascript:;" @click="openAddMobilePop(item.customerId,item.name,item.stationId)">添加</a>
             </td>
+            <td>{{item.totalAmount/100}}元</td>
             <td>
               <span :class="item.allPaid?'c-333':'c-f00'">{{item.allPaid?'已结清':'未结清'}}</span>
-              <router-link :to="{ path: '/monthly/orderList', query: { customerId: item.customerId,userName: item.name}}">收账</router-link>
+              <router-link
+                :to="{ path: '/monthly/orderList', query: { customerId: item.customerId,userName: item.name,stationId:item.stationId}}">
+                收账
+              </router-link>
             </td>
             <td>
-              <a href="javascript:;" @click="openEditContactPop(item.customerId,item.username)">编辑</a>
-              <a href="javascript:;" @click="openDeleteClientPop(item.customerId,item.name)">删除</a>
+              <a href="javascript:;" @click="openEditContactPop(item.customerId,item.username,item.stationId)">编辑</a>
+              <a href="javascript:;" @click="openDeleteClientPop(item.customerId,item.name,item.stationId)">删除</a>
             </td>
           </tr>
         </template>
         <template v-else-if="monthlyData!==''">
           <tr>
-            <td colspan="6" class="table-noDate">
-              没有找到任何订单，您可以<a href="javascript:;" @click="openEditClientPop()">添加订单</a>
+            <td colspan="7" class="table-noDate">
+              没有找到月结账户，您可以<a href="javascript:;" @click="openEditClientPop()">添加账户</a>
             </td>
           </tr>
         </template>
@@ -311,9 +305,16 @@
         <div class="popTitle">月结账户<span @click="closePop"></span></div>
         <div class="popBox">
           <ul class="editClient-main">
-            <li><h3>账户名称：</h3><input type="text" v-model="editClientData.name" placeholder="请输入账户名称"/></li>
-            <li><h3>联系人：</h3><input type="text" v-model="editClientData.contact" placeholder="请输入姓名"/></li>
-            <li><h3>手机：</h3><input type="text" v-model="editClientData.mobile" placeholder="请输入手机号码"/></li>
+            <li class="list"><h3>账户名称：</h3><input type="text" v-model="editClientData.name" placeholder="请输入账户名称"/></li>
+            <li class="list"><h3>联系人：</h3><input type="text" v-model="editClientData.contact" placeholder="请输入姓名"/></li>
+            <li class="list"><h3>手机：</h3><input type="text" v-model="editClientData.mobile" placeholder="请输入手机号码"/></li>
+            <li class="list"><h3>归属站点:</h3>
+              <Select v-model="editClientData.stationId" placeholder="请选择归属站点"
+                      :disabled="role=='MANAGER'">
+                <Option v-for="item in stationList" :value="item.stationId" :key="item.stationId">{{
+                  item.name }}
+                </Option>
+              </Select></li>
           </ul>
           <a class="saveBtn" href="javascript:;" @click="verificationClient">{{isSaving?'保存中':'保存'}}</a>
         </div>
@@ -381,15 +382,29 @@
   </div>
 </template>
 <script>
-  import {getCookie, delCookie, trim, verificationName, verificationPone} from '../../assets/js/common'
-  import {serviceApi} from '../../assets/js/serviceApi'
+  import {
+    getCookie,
+    delCookie,
+    trim,
+    verificationName,
+    verificationPone,
+    getLocalStorage,
+    setLocalStorage
+  } from '../../assets/js/common'
+  import { serviceApi } from '../../assets/js/serviceApi'
   export default {
     mounted(){
-      this.getListDate()
+      let _this = this,
+        _callback = function () {
+          _this.getListDate()
+        }
+      _this.getStationList(_callback)
     },
     data(){
       let _query = this.$router.history.current.query
       return {
+        stationList: '',
+        role: getCookie('role') || '',
         searchData: {
           'userName': _query.userName || '',
           'mobile': _query.mobile || '',
@@ -397,11 +412,13 @@
           //'maxDate': _query.maxDate || ''
         },
         monthlyData: '',
+        monthlyTotalAmount:'',
         editClientData: {
           id: '',
           name: '',
           contact: '',
-          mobile: ''
+          mobile: '',
+          stationId: ''
         },
         editContactData: {
           id: '',
@@ -436,21 +453,46 @@
       setMaxDate(date){
         this.searchData.maxDate = date
       },
-      search(){
-        this.$router.push({
-          path: this.$router.history.current.path,
-          query: this.searchData
+      //获取站点列表
+      getStationList(callback){
+        let _stationList = getLocalStorage('stationListData') || ''
+        if (_stationList != '') {
+          this.stationList = _stationList
+          if (callback) {
+            callback()
+          }
+          return false
+        }
+        this.$get(serviceApi.stationList).then(res => {
+          if (res.code == 'SUCCESS') {
+            let _data = res.data
+            this.stationList = _data
+            setLocalStorage('stationListData', _data)
+            if (callback) {
+              callback()
+            }
+          } else {
+            this.$Message.error(res.msg)
+          }
+        }).catch(err => {
+          this.$Message.error('获取站点列表，请刷新重试')
         })
+      },
+      search(){
+        /*this.$router.push({
+         path: this.$router.history.current.path,
+         query: this.searchData
+         })*/
       },
       emptySearchCondition(){
         let _parameter = {
+          'userName': '',
           'mobile': '',
-          'minDate': '',
-          'maxDate': ''
         }
         this.searchData = _parameter
       },
       getListDate(){
+        this.$Spin.show()
         this.$get(serviceApi.monthlyList, {
           isWithDetail: true
         }).then(res => {
@@ -459,44 +501,61 @@
           } else {
             this.$Message.error(res.msg)
           }
+          this.$Spin.hide()
         }).catch(err => {
-          this.$Message.error("操作失败")
+          this.$Message.error('操作失败')
+          this.$Spin.hide()
         })
       },
       setListDate(data){
-        let _data = data || []
+        let _data = data || [],
+          totalAmount=0;
+        for(let i=0;i<_data.length;i++){
+          totalAmount+=_data[i].totalAmount;
+        }
+        this.monthlyTotalAmount=totalAmount;
         this.monthlyData = _data
       },
       //开启编辑账户弹框
       openEditClientPop(id, name, contact, mobile){
+        let _role = this.role,
+          _stationId = ''
+
+        if (_role == 'MANAGER') {
+          _stationId = getCookie('stationId') || ''
+        }
         this.editClientData = {
           id: id || '',
           name: name || '',
           contact: contact || '',
-          mobile: mobile || ''
+          mobile: mobile || '',
+          stationId: Number(_stationId)
         }
         this.isShowEditClientPop = true
       },
       //开启编辑账户联系人弹框
-      openEditContactPop(id, contact){
+      openEditContactPop(id, contact, stationId){
         this.editContactData = {
           id: id || '',
+          stationId: stationId || '',
           contact: contact || ''
         }
         this.isShowEditContactPop = true
       },
       //开启删除账户弹框
-      openDeleteClientPop(id, name){
+      openDeleteClientPop(id, name, stationId){
         this.deleteClientData = {
           id: id || '',
-          name: name || ''
+          name: name || '',
+          stationId: stationId || ''
         }
         this.isShowDeleteClientPop = true
       },
       //开启添加关联手机弹框
-      openAddMobilePop(id, name){
+      openAddMobilePop(id, name, stationId){
         this.addMobileData = {
           id: id || '',
+          stationId: stationId || '',
           name: name || '',
           mobiles: [''],
           currentProgress: 0
@@ -504,7 +563,7 @@
         this.isShowAddMobilePop = true
       },
       //开启解绑手机弹框
-      openUntieMobilePop(id){
+      openUntieMobilePop(id, stationId){
         let _monthlyData = this.monthlyData,
           _len = _monthlyData.length,
           _mobiles = []
@@ -518,6 +577,7 @@
           }
         }
         this.untieMobileData.id = id
+        this.untieMobileData.stationId = stationId
         this.untieMobileData.mobiles = _mobiles
         this.isShowUntieMobilePop = true
       },
@@ -546,7 +606,8 @@
       relieveAssociatedPhone(e, mobile){
         let _element = e.target,
           _text = _element.innerHTML,
-          _id = this.untieMobileData.id || ''
+          _id = this.untieMobileData.id || '',
+          _stationId = this.untieMobileData.stationId || ''
         if (_text != '解除绑定') {
           return false
         } else if (_id == '') {
@@ -555,7 +616,7 @@
           return false
         }
         _element.innerHTML = '解绑中'
-        this.$post(serviceApi.monthlyDel + '/' + _id + '/' + mobile).then(res => {
+        this.$post(serviceApi.monthlyDel + '/' + _stationId + '/' + _id + '/' + mobile).then(res => {
           this.isSaving = false
           if (res.code == 'SUCCESS') {
             this.$Message.success('解除成功')
@@ -565,7 +626,7 @@
             _element.innerHTML = '解除绑定'
           }
         }).catch(err => {
-          this.$Message.error("操作失败")
+          this.$Message.error('操作失败')
           _element.innerHTML = '解除绑定'
         })
       },
@@ -618,13 +679,14 @@
       //添加关联手机
       addAssociatedPhone(){
         let _id = this.addMobileData.id,
+          _stationId = this.addMobileData.stationId,
           mobiles = this.addMobileData.mobiles,
           len = mobiles.length
         if (_id) {
           this.isSaving = true
           for (let i = 0; i < len; i++) {
             let _item = mobiles[i]
-            this.$post(serviceApi.monthlyAddAssociatedPhone + '/' + _id, {
+            this.$post(serviceApi.monthlyAddAssociatedPhone + '/' + _stationId + '/' + _id, {
               'mobile': _item
             }).then(res => {
               this.isSaving = false
@@ -637,7 +699,7 @@
                 this.completeAssociatedPhone(len)
               }
             }).catch(err => {
-              this.$Message.error("操作失败")
+              this.$Message.error('操作失败')
               this.completeAssociatedPhone(len)
             })
           }
@@ -682,7 +744,8 @@
             _id = _client.id || '',
             _name = _client.name ? trim(_client.name) : '',
             _contact = _client.contact ? trim(_client.contact) : '',
-            _mobile = _client.mobile ? trim(_client.mobile) : ''
+            _mobile = _client.mobile ? trim(_client.mobile) : '',
+            _stationId = _client.stationId
           if (_name == '') {
             this.$Message.warning('账户名称不能为空')
             return false
@@ -692,19 +755,22 @@
           } else if (!verificationPone(_mobile)) {
             this.$Message.warning('请输入真实的手机号码')
             return false
+          } else if (_stationId == '') {
+            this.$Message.warning('请选择归属站点')
+            return false
           }
-          this.saveClient(_id, _name, _contact, _mobile)
+          this.saveClient(_id, _name, _contact, _mobile, _stationId)
         }
       },
       //保存账户
-      saveClient(id, name, contact, mobile){
-        let _id = id
+      saveClient(id, name, contact, mobile, stationId){
         this.isSaving = true
         this.$post(serviceApi.monthlyAdd, {
           'id': id,
           'name': name,
           'username': contact,
-          'mobile': mobile
+          'mobile': mobile,
+          'stationId': stationId
         }).then(res => {
           this.isSaving = false
           if (res.code == 'SUCCESS') {
@@ -716,7 +782,7 @@
           }
         }).catch(err => {
           this.isSaving = false
-          this.$Message.error("操作失败")
+          this.$Message.error('操作失败')
         })
       },
       //保存联系人
@@ -726,13 +792,14 @@
         } else {
           let _contact = this.editContactData,
             _id = _contact.id,
+            _stationId = _contact.stationId,
             _name = _contact.contact ? trim(_contact.contact) : ''
-          if (_name=="") {
+          if (_name == '') {
             this.$Message.warning('请输入联系人')
             return false
           }
           this.isSaving = true
-          this.$post(serviceApi.monthlyContactUpdate + '/' + _id, {
+          this.$post(serviceApi.monthlyContactUpdate + '/' + _stationId + '/' + _id, {
             'username': _name
           }).then(res => {
             this.isSaving = false
@@ -753,16 +820,17 @@
             }
           }).catch(err => {
             this.isSaving = false
-            this.$Message.error("操作失败")
+            this.$Message.error('操作失败')
           })
         }
       },
       //删除账户
       deleteClient(){
-        let _id = this.deleteClientData.id || ''
+        let _id = this.deleteClientData.id || '',
+          _stationId = this.deleteClientData.stationId || ''
         if (_id) {
           this.isSaving = true
-          this.post(serviceApi.monthlyDel + '/' + _id).then(res => {
+          this.post(serviceApi.monthlyDel + '/' + _stationId + '/' + _id).then(res => {
             this.isSaving = false
             if (res.code == 'SUCCESS') {
               this.isShowDeleteClientPop = false
@@ -773,7 +841,7 @@
             }
           }).catch(err => {
             this.isSaving = false
-            this.$Message.error("操作失败")
+            this.$Message.error('操作失败')
           })
         } else {
           this.$Message.warning('操作失败，没有所需id')
@@ -795,7 +863,39 @@
             }
           }
         }
-      }
+      },
+      //筛选
+      filterData(index){
+        let _this = this,
+          _search = _this.searchData,
+          _userName = _search.userName || '',
+          _mobile = _search.mobile || '',
+          _data = _this.monthlyData,
+          isUserName = true,
+          isMobile = true,
+          isShow = true
+        if (_userName == '' && _mobile == '') {
+          return isShow
+        }
+        let _item = _data[index],
+          _mobiles = _item.mobiles || []
+        if (_userName != '') {
+          if (_item.name.indexOf(_userName) == -1 && _item.username.indexOf(_userName) == -1 && _item.mobile.indexOf(_userName) == -1) {
+            isUserName = false
+          }
+        }
+        if (_mobile != '') {
+          isMobile = false
+          for (let i = 0; i < _mobiles.length; i++) {
+            if (_mobiles[i].indexOf(_mobile) != -1) {
+              isMobile = true
+              break
+            }
+          }
+        }
+        isShow = isUserName && isMobile
+        return isShow
+      },
     }
   }
 </script>

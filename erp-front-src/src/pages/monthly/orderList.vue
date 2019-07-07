@@ -115,25 +115,14 @@
           <span class="title">下单时间：</span>
           <div class="clearfix">
             <div class="doubleRow-left">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="startDate" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMinDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+                  <DatePicker :value="startDate" type="date" placeholder="请选择时间"
+                              @on-change="setMinDate"></DatePicker>
             </div>
             <div class="doubleRow-span">到</div>
             <div class="doubleRow-right">
-              <template>
-                <Row>
-                  <Col span="12">
-                  <DatePicker :value="endData" type="date" placeholder="请选择时间" style="width: 124px"
-                              @on-change="setMaxDate(date)"></DatePicker>
-                  </Col>
-                </Row>
-              </template>
+
+                  <DatePicker :value="endDate" type="date" placeholder="请选择时间"
+                              @on-change="setMaxDate"></DatePicker>
             </div>
           </div>
         </li>
@@ -155,15 +144,16 @@
         class="fr">已选中订单费用：<i>{{selectedOrderAmount}}</i> 元；&nbsp;全部订单费用：<i>{{sumAmount}}</i> 元</span></div>
       <table>
         <tr>
-          <th width="6%">
+          <th width="7%">
             <template>
               <Checkbox :value="selectAll" @click.prevent.native="selectAllFun">&nbsp;全选</Checkbox>
             </template>
           </th>
-          <th width="20%">订单号</th>
-          <th width="17%">发货</th>
-          <th width="17%">收货</th>
-          <th width="17%">货物</th>
+          <th width="17%">订单号</th>
+          <th width="15%">下单时间</th>
+          <th width="16%">发货</th>
+          <th width="16%">收货</th>
+          <th width="15%">货物</th>
           <!--<th width="190">寄方费用</th>-->
           <th>{{userName}}需支付</th>
         </tr>
@@ -178,6 +168,7 @@
               </template>
             </td>
             <td>{{item.tradeId}}</td>
+            <td>{{item.gmtCreate}}</td>
             <td>
               <div class="address">{{item.senderInfo.station.name}}<p>{{item.senderInfo.name}}
                 {{item.senderInfo.mobile}}</p></div>
@@ -235,8 +226,9 @@
       return {
         customerId: _query.customerId || '',
         userName: _query.userName || '',
+        stationId:_query.stationId || '',
         startDate: _query.startDate || '',
-        endData: _query.endData || '',
+        endDate: _query.endDate || '',
         sumAmount:0,
         orders: '',
         selects: [],
@@ -255,7 +247,7 @@
         this.startDate = date
       },
       setMaxDate(date){
-        this.endData = date
+        this.endDate = date
       },
       getCurrentPage(index, size){
         let _num = Number(index) / Number(size)
@@ -271,14 +263,14 @@
       },
       emptySearchCondition(){
         this.startDate = ''
-        this.endData = ''
+        this.endDate = ''
       },
       getListData(){
         let _this = this;
         this.$get(serviceApi.monthlyOrderList, {
           customerId: _this.customerId,
           startDate: _this.startDate || '',
-          endData: _this.endData || '',
+          endDate: _this.endDate || '',
           index: _this.pageInfo.index || 0,
           size: _this.pageInfo.size || 0
         }).then(res => {
@@ -372,6 +364,7 @@
           _selects=_this.selects;
         _this.modifying=true;
           _this.$post(serviceApi.monthlyOrderPay, {
+            stationId:_this.stationId,
           customerId: _this.customerId,
             tradeIds:_selects||[]
         }).then(res => {
@@ -418,7 +411,7 @@
         _this.$get(serviceApi.monthlyOrderListExport, {
           customerId: _this.customerId,
           startDate: _this.startDate || '',
-          endData: _this.endData || '',
+          endDate: _this.endDate || '',
           index: _this.pageInfo.index || 0,
           size: _this.pageInfo.size || 0
         }).then(res => {

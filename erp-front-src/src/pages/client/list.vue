@@ -160,7 +160,7 @@
         </li>
       </ul>-->
       <div class="searchBtn clearfix">
-        <a class="searchBtn-left" href="javascript:;" @click="search">搜索</a>
+        <a class="searchBtn-left" href="javascript:;" @click="search">{{isSearching?'搜索中':'搜索'}}</a>
         <a class="searchBtn-right" @click="emptySearchCondition" href="javascript:;">清空</a>
       </div>
     </div>
@@ -192,6 +192,15 @@
               </td>
               <td><a href="javascript:;"
                      @click="openEditDataPop(item.mobile,item.name,item.address,item.station?item.station.stationId:'')">编辑资料</a>
+              </td>
+            </tr>
+            <tr>
+              <td colspan="6">
+                <template>
+                  <Page :total="total" :current="getCurrentPage(searchData.index,searchData.size)"
+                        :page-size="searchData.size"
+                        @on-change="pageChange"></Page>
+                </template>
               </td>
             </tr>
           </template>
@@ -255,7 +264,7 @@
           _this.getListData()
         }
       _this.getStationList(_callback)
-
+      this.$Spin.show()
     },
     data(){
       let _query = this.$router.history.current.query
@@ -266,8 +275,8 @@
           'minOrderCount': _query.minOrderCount || '',
           'maxOrderCount': _query.maxOrderCount || '',
           'monthly': _query.maxOrderCount === true ? true : _query.maxOrderCount === false ? false : '',
-          'size': _query.size || '',
-          'index': _query.index ? parseInt(_query.index) : 1
+          'size': _query.size || 20,
+          'index': _query.index ? parseInt(_query.index) : 0
         },
         total: 0,
         stationList: '',
@@ -284,6 +293,7 @@
         isShowEditDataPop: false,
         isShowAddMobilePop: false,
         isSaving: false,
+        isSearching:false,
         clients: []
       }
     },
@@ -295,7 +305,23 @@
         _this.value = _reg
       },
       search(){
-        this.searchData.page = 1
+        if(this.isSearching){
+          return false;
+        }
+        this.isSearching=true;
+        this.searchData.index = 0
+        this.getListData()
+      },
+      getCurrentPage(index, size){
+        let _num = Number(index) / Number(size)
+        _num = Math.ceil(_num)
+        if (_num < 1) {
+          _num = 1
+        }
+        return _num
+      },
+      pageChange(num){
+        this.searchData.index = (num - 1) * this.searchData.size
         this.getListData()
       },
       //获取站点列表
@@ -330,18 +356,23 @@
           'minOrderCount': '',
           'maxOrderCount': '',
           'type': '',
-          'size': '',
+          'size': this.searchData.size,
           'index': this.searchData.index
         }
         this.searchData = _parameter
       },
       getListData(){
+        this.$Spin.show()
         this.$get(serviceApi.customerList, this.searchData).then(res => {
           if (res.code == 'SUCCESS') {
-            this.clients = res.data
-            this.total = res.pageInfo.total
+            this.clients = res.data;
+            this.total = res.pageInfo.total;
+            this.isSearching=false;
+            this.$Spin.hide()
           } else {
             this.$Message.error(res.msg)
+            this.isSearching=false;
+            this.$Spin.hide()
           }
         })
       },

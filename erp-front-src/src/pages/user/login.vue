@@ -70,20 +70,21 @@
       login(parameter){
         this.logging=true;
         clearCookie();  //清空全部cookie
-        localStorage.clear();//清楚本地缓存
+        localStorage.clear();//清除本地存储
         this.$post(serviceApi.login,parameter).then(res=>{
           this.logging=false
           if(res.code=='SUCCESS'){
             let _data=res.data
-            if(_data.role=="ADMIN"){
+            if(_data.role=="ADMIN" || _data.role=="MANAGER"){
               this.$Message.success(res.msg)
               setCookie('token', _data.token, 32 * 24 * 3600)
-              setCookie('userName', _data.role, 32 * 24 * 3600)
+              setCookie('role', _data.role, 32 * 24 * 3600)
               setCookie('companyId', _data.companyId, 32 * 24 * 3600)
               setCookie('companyName', _data.companyName, 32 * 24 * 3600)
+              setCookie('stationId', _data.stationId, 32 * 24 * 3600)
               this.$router.push('/business')
             }else{
-              this.$Message.success("您不是管理员，无法登陆")
+              this.$Message.success("权限不足，无法登陆")
             }
           }else{
             this.$Message.error(res.msg)

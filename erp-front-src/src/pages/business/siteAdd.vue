@@ -27,8 +27,9 @@
   .branchSiteAdd-main {
     background: #fff;
     padding: 20px;
-    .title{
-      font-size: 14px; color: #333;
+    .title {
+      font-size: 14px;
+      color: #333;
     }
     .submenu {
       width: 100%;
@@ -83,19 +84,35 @@
       color: #333;
       margin-bottom: 10px;
     }
-    .branchSiteAdd-cost li{
-      width: 360px; margin-top: 10px;
+    .branchSiteAdd-cost li {
+      width: 360px;
+      margin-top: 10px;
       padding-left: 200px;
       padding-right: 30px;
       box-sizing: border-box;
-      border:1px solid #E4E4E4;
+      border: 1px solid #E4E4E4;
       position: relative;
       font-size: 14px;
       color: #333;
       line-height: 33px;
-      label{ position: absolute; top: 0; left: 10px; }
-      i{position: absolute;right: 10px; top: 0; font-style: normal;}
-      input{ border: 0; text-align: right; display: block; width: 100%; height: 33px;}
+      label {
+        position: absolute;
+        top: 0;
+        left: 10px;
+      }
+      i {
+        position: absolute;
+        right: 10px;
+        top: 0;
+        font-style: normal;
+      }
+      input {
+        border: 0;
+        text-align: right;
+        display: block;
+        width: 100%;
+        height: 33px;
+      }
     }
     input::-webkit-input-placeholder {
       color: #999;
@@ -143,21 +160,22 @@
       <div class="branchSiteAdd-title">添加成本</div>
       <div class="branchSiteAdd-main" v-show="isShow">
         <div class="branchSiteAdd-branch">
-          <span class="title">选择网点：</span><Select  v-model="stationId" style="width:280px" placeholder="请选择公司网点" clearable>
-          <Option v-for="item in stationList" :value="item.stationId" :key="item.stationId">{{
-            item.name }}
-          </Option>
-        </Select>
+          <span class="title">选择网点：</span>
+          <Select v-model="stationId" style="width:280px" placeholder="请选择公司网点" :disabled="isEdit" clearable>
+            <Option v-for="item in stationList" :value="item.stationId" :key="item.stationId">{{
+              item.name }}
+            </Option>
+          </Select>
         </div>
         <div class="branchSiteAdd-date">
           <p class="title" style="margin-top: 20px">编辑的时间段：</p>
           <RadioGroup v-model="dateType">
             <Radio label="month">按月编辑</Radio>
-            <Radio label="year">按年编辑</Radio>
+            <Radio label="year" :disabled="isEdit">按年编辑</Radio>
           </RadioGroup>
           <div style="margin-top: 20px;">
-            <DatePicker style="width:280px" :disabled="isSaving" :value="date" :type="dateType"
-                        placeholder="请选择时间" @on-change="setAddPriceDate"></DatePicker>
+            <DatePicker style="width:280px" :value="date" :type="dateType"
+                        placeholder="请选择时间" @on-change="setAddPriceDate" :disabled="isEdit||isSaving"></DatePicker>
           </div>
         </div>
         <div class="branchSiteAdd-cost">
@@ -178,22 +196,33 @@
 </template>
 <script>
   import { serviceApi } from '../../assets/js/serviceApi'
-  import { getNowDay, getLastMonthTime, getMonthDifference,getLocalStorage,setLocalStorage } from '../../assets/js/common'
+  import {
+    getNowDay,
+    getLastMonthTime,
+    getMonthDifference,
+    getLocalStorage,
+    setLocalStorage
+  } from '../../assets/js/common'
   export default {
     mounted(){
-      let _this=this;
-      let _callback=function(){
-        _this.isShow=true;
-        _this.getExpendItems();
-        };
+      let _this = this,
+        _query = this.$route.query,
+        _callback = function () {
+          _this.isShow = true
+          _this.getExpendItems(function () {
+            if (_query.date && _query.station) {
+              _this.getExpend(_query.date, _query.station)
+            }
+          })
+        }
       this.getStationList(_callback)
     },
     data(){
       return {
-        isShow:false,
-        stationId:'',
-        stationList:'',
-        items:'',
+        isShow: false,
+        stationId: '',
+        stationList: '',
+        items: '',
         dateType: 'month',  //month
         date: '',
         prices: [],
@@ -228,17 +257,52 @@
         })
       },
       //获取成本项
-      getExpendItems(){
+      getExpendItems(callback){
         this.$get(serviceApi.addExpendItem).then(res => {
           if (res.code == 'SUCCESS') {
-            let _data = res.data;
+            let _data = res.data
             this.items = _data
+            if (callback) {
+              callback()
+            }
           } else {
             this.$Message.error(res.msg)
           }
         }).catch(err => {
           this.isLoading = false
           this.$Message.error('获取数据失败，请重试')
+        })
+      },
+      //获取明细
+      getExpend(date, station){
+        let _this = this,
+          _items = _this.items
+        this.$Spin.show();
+        _this.$get(serviceApi.getExpendList + '/' + date + '/' + station).then(res => {
+          if (res.code == 'SUCCESS') {
+            _this.stationId = station > 0 ? Number(station): ''
+            _this.date = date
+            _this.isEdit = true
+            let _data = res.data
+            for (let i = 0; i < _data.length; i++) {
+              let _prices = _data[0].prices
+              for (let p = 0; p < _prices.length; p++) {
+                let _price = _prices[p]
+                for (let o = 0; o < _items.length; o++) {
+                  let _item = _items[o]
+                  if (_item.itemId == _price.itemId && _price.amount > 0) {
+                    _this.prices[o] = _price.amount / 100
+                  }
+                }
+              }
+            }
+          } else {
+            _this.$Message.error(res.msg);
+          }
+          _this.$Spin.hide();
+        }).catch(err => {
+          _this.$Message.error('获取数据失败，请重试')
+          _this.$Spin.hide();
         })
       },
       inputKeyup(e){
@@ -254,17 +318,17 @@
         this.date = date
       },
       savePrices(){
-        let $date=this.date,
+        let $date = this.date,
           $addPrice = this.prices,
           $costItems = this.items,
-          stationId=this.stationId;
+          stationId = this.stationId
         if ($date == '') {
           this.$Message.warning('请选择时间')
           return false
         }
         let _prices = [],
           _params = '',
-          dateType=this.dateType;
+          dateType = this.dateType
         for (let i = 0; i < $costItems.length; i++) {
           let item = $costItems[i],
             price = $addPrice[i]
@@ -280,7 +344,7 @@
         }
         this.isSaving = true
         this.$post(serviceApi.addPrices + _params, {
-          stationId:stationId,
+          stationId: stationId,
           prices: _prices,
         }).then(res => {
           this.isSaving = false

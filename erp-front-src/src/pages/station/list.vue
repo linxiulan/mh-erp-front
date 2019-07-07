@@ -190,7 +190,7 @@
           _element.innerHTML = '删除'
           if (res.code == 'SUCCESS') {
             this.$Message.success('删除成功')
-            this.removeStationSuccess(id)
+            this.getListData()
           } else {
             this.$Message.error(res.msg)
           }

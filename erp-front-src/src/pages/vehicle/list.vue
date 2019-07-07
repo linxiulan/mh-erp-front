@@ -330,7 +330,7 @@
         _this.$post(serviceApi.addCar, {
           'plateNumber': licensePlate
         }).then(res => {
-          _this.isSaving = true;
+          _this.isSaving = false;
           if (res.code == 'SUCCESS') {
             _this.$Message.success('添加成功')
             _this.getCarList()

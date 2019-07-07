@@ -10,7 +10,8 @@ buildNumber.properties
 .idea
 *.iml
 erp-front-web/src/main/webapp/WEB-INF/resource/
-
+dist
+node_modules/
 
 
 # Avoid ignoring Maven wrapper jar file (.jar files are usually ignored)
